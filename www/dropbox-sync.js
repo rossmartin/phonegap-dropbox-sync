@@ -79,4 +79,8 @@ DropboxSync.prototype.openFile = function(dropboxFilePath, successCB, failCB) {
     exec(successCB, failCB, pluginName, 'openFile', [dropboxFilePath]);
 };
 
+DropboxSync.prototype.getStatus = function(dropboxFilePath, successCB, failCB) {
+    exec(successCB, failCB, pluginName, 'getStatus', [dropboxFilePath]);
+};
+
 module.exports = new DropboxSync();
