@@ -13,6 +13,7 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -30,6 +31,7 @@ import com.dropbox.sync.android.DbxException;
 import com.dropbox.sync.android.DbxException.Unauthorized;
 import com.dropbox.sync.android.DbxFileInfo;
 import com.dropbox.sync.android.DbxFileSystem;
+import com.dropbox.sync.android.DbxFileStatus;
 import com.dropbox.sync.android.DbxPath;
 import com.dropbox.sync.android.DbxFileSystem.PathListener.Mode;
 import com.dropbox.sync.android.DbxFile;
@@ -105,7 +107,11 @@ public class DropboxSync extends CordovaPlugin {
             String path = args.getString(0);
             openFile(path, callbackContext);
             return true;
-        }
+        } else if (action.equals("getStatus")){
+			String path = args.getString(0);
+			getStatus(path, callbackContext);
+			return true;
+		}
         return false;
     }
     
@@ -399,8 +405,9 @@ public class DropboxSync extends CordovaPlugin {
                     String fileName = path.substring(fileNameNeedle);
                     Log.d(TAG, "fileName: " + fileName);
                     
-                    File cacheFolder = cordova.getActivity().getApplicationContext().getExternalCacheDir();
+                    File cacheFolder = cordova.getActivity().getApplicationContext().getExternalFilesDir(null);
                     
+					
                     File tempFile = new File(cacheFolder + "/" + fileName);
                     Log.d(TAG, "tempFile.getPath(): " + tempFile.getPath());
                     
@@ -426,8 +433,9 @@ public class DropboxSync extends CordovaPlugin {
                         file.close();
                     }
                     
-                    openTempFile(tempFile.getPath());
-                    callbackContext.success();
+                    //openTempFile(tempFile.getPath());
+                    String contents=tempFile.getPath();
+					callbackContext.success(contents);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
                 }
@@ -435,7 +443,47 @@ public class DropboxSync extends CordovaPlugin {
         });
     }
         
-    @SuppressWarnings("deprecation")
+    
+	
+	
+    private void getStatus(final String path, final CallbackContext callbackContext) {
+        Log.d(TAG, "getStatus method executing");
+        cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+                try {
+                    DbxFileSystem dbxFs = DbxFileSystem.forAccount(mDbxAcctMgr.getLinkedAccount());
+                    DbxPath filePath = new DbxPath(path);
+                    DbxFile file = dbxFs.open(filePath);
+                    DbxFileStatus fileStatus = file.getSyncStatus();
+					String contents;
+					if(fileStatus == null){
+						contents="giving null status";
+					}else{
+						if (fileStatus.isCached){
+								if (fileStatus.isLatest){
+									contents="cached latest";
+								}else{
+									contents="cached not latest";
+								}							
+						}else{
+									contents="not cached";						
+						}
+					}
+                    // write the contents of the chosen Dropbox file to the tempFile
+                    file.close();
+					callbackContext.success(contents);
+                } catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+
+	
+	
+	
+	@SuppressWarnings("deprecation")
     private File resolveLocalFileSystemURI(String url) throws IOException, JSONException {
         String decoded = URLDecoder.decode(url, "UTF-8");
 
